@@ -5,4 +5,4 @@ set -e
 # cd to script dir
 cd "${0%/*}" || exit 1
 
-./nativefier.sh -l "wire.png" -s "wire" -n "Wire" -u "app.wire.com" "$@"
+./nativefier.sh -l "./logos/wire.png" -s "wire" -n "Wire" -u "app.wire.com" "$@"
