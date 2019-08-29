@@ -2,13 +2,14 @@
 
 set -e
 
+SCRIPT_NAME="${0##*/}"
 TEMP_DIR="$(mktemp -d)"
 
 INSTALL_DIR=""
 EXECUTABLE_NAME=""
 
 APP_NAME=""
-APP_IMAGE=""
+APP_LOGO=""
 APP_SHORT_NAME=""
 APP_URL=""
 FORCE="no"
@@ -18,16 +19,17 @@ cat <<EOF
 Usage: ${SCRIPT_NAME} [options] <switches>
 
 Switches:
- --name       (-n)     App name (e.g. "MyApp")
- --short-name (-s)     Short app name (e.g. "my-app")
- --image      (-i)     App image (e.g. "./my-app.png")
- --url        (-u)     App URL without protocol (e.g. "web.my-app.com")
+ --logo        (-l)     App logo (png file, e.g. "./my-app.png")
+ --name        (-n)     App name (e.g. "MyApp")
+ --short-name  (-s)     Short app name (e.g. "my-app")
+ --url         (-u)     App URL without protocol (e.g. "web.my-app.com")
 
 Options:
- --force      (-f)     Force overwriting existing installations
+ --force       (-f)     Force overwriting existing installations (default is false)
+ --install-dir (-i)     App installation dir (default is "/opt/<my-app>")
 
 Commands:
- --help       (-h)     Display this help message
+ --help        (-h)     Display this help message
 EOF
 }
 
@@ -37,12 +39,9 @@ _cleanup() {
 
 check_capabilities() {
   if ! command -v "npx" > /dev/null; then
-    echo "npx not found. Please install the latest version of npm."
+    echo "npx not found. Please install the npm >= 5.2.0."
     exit 1
   fi
-
-  echo "Asking for sudo rights ..."
-  sudo true
 }
 
 check_installation() {
@@ -60,8 +59,9 @@ check_installation() {
 copy_app() {
   echo "Copying app to \"${INSTALL_DIR}\" ..."
 
-  sudo rm -rf "${INSTALL_DIR}"
-  sudo cp -r "${TEMP_DIR}/${EXECUTABLE_NAME}-linux-x64" "${INSTALL_DIR}"
+  #mkdir -p "${INSTALL_DIR}"
+  rm -rf "${INSTALL_DIR}" > /dev/null 2>&1 || sudo rm -rf "${INSTALL_DIR}"
+  cp -r "${TEMP_DIR}/${EXECUTABLE_NAME}-linux-x64" "${INSTALL_DIR}" > /dev/null 2>&1 || sudo cp -r "${TEMP_DIR}/${EXECUTABLE_NAME}-linux-x64" "${INSTALL_DIR}"
 }
 
 create_desktop_entry() {
@@ -83,8 +83,8 @@ EOL
 }
 
 fix_chrome_sandbox() {
-  sudo chown root "${INSTALL_DIR}/chrome-sandbox"
-  sudo chmod 4755 "${INSTALL_DIR}/chrome-sandbox"
+  chown root "${INSTALL_DIR}/chrome-sandbox" > /dev/null 2>&1 || sudo chown root "${INSTALL_DIR}/chrome-sandbox"
+  chmod 4755 "${INSTALL_DIR}/chrome-sandbox" > /dev/null 2>&1 || sudo chmod 4755 "${INSTALL_DIR}/chrome-sandbox"
 }
 
 create_app() {
@@ -95,7 +95,7 @@ create_app() {
 
   echo "Creating app ..."
 
-  cp "${APP_IMAGE}" "${TEMP_DIR}/icon.png"
+  cp "${APP_LOGO}" "${TEMP_DIR}/icon.png"
 
   cd "${TEMP_DIR}" || exit 1
   npx nativefier --single-instance -i "icon.png" -n "${APP_NAME}" "${APP_URL}"
@@ -121,11 +121,15 @@ do
             ;;
         -s|--short-name )
             APP_SHORT_NAME="${2}"
-            INSTALL_DIR="/opt/${APP_SHORT_NAME}"
+            INSTALL_DIR="$(readlink -f "${INSTALL_DIR:-/opt/${APP_SHORT_NAME}}")"
             shift 2
             ;;
-        -i|--image )
-            APP_IMAGE="${2}"
+        -l|--logo )
+            APP_LOGO="${2}"
+            shift 2
+            ;;
+        -i|--install-dir )
+            INSTALL_DIR="$(readlink -f "${2}")"
             shift 2
             ;;
         -u|--url )
@@ -158,8 +162,8 @@ if [ -z "${APP_SHORT_NAME}" ]; then
     exit 1
 fi
 
-if [ -z "${APP_IMAGE}" ]; then
-   echo "No app image set."
+if [ -z "${APP_LOGO}" ]; then
+   echo "No app logo set."
     _print_usage
     exit 1
 fi
