@@ -10,7 +10,7 @@ Create Linux apps with [nativefier](https://www.npmjs.com/package/nativefier).
 
 ## Usage
 
-1. Clone this repository or [download](https://github.com/ffflorian/nativefier-apps/archive/master.zip) it
+1. Clone this repository or [download](https://github.com/ffflorian/nativefier-apps/archive/main.zip) it
 2. Run `nativefier.sh` or one of the app scripts
 
 
